@@ -49,3 +49,8 @@ __pycache__
 
 docs/build
 site/
+
+
+
+# Custom
+tests/**/*.png
