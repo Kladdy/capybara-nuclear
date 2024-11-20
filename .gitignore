@@ -54,3 +54,7 @@ site/
 
 # Custom
 tests/**/*.png
+tests/**/cwd
+tests/**/img
+tests/**/results
+data
