@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 from dataclasses import dataclass, field
-from typing import ClassVar
 import openmc
 import openmc.stats
 import openmc.model
@@ -12,7 +11,6 @@ import openmc.mgxs
 from capybara_nuclear.mgxs.openmc import ba_pin_positions, materials, geometries
 from dataclasses_json import dataclass_json
 import pickle 
-from typing import List
 
 
 @dataclass_json
@@ -30,9 +28,8 @@ class InputData():
     clad_ir: float = 0.47
     clad_or: float = 0.55
     lattice_size: int = 10
-    # dt: ClassVar[list[int]] = [3 * 24 * 60 * 60] * 5 + [200 * 24 * 60 * 60] * 10
-    dt: List[int] = field(default_factory=lambda: [3 * 24 * 60 * 60] * 5 + [200 * 24 * 60 * 60] * 10)
-    timestep_units: str = "s"
+    dt: list[int] = field(default_factory=lambda: [2] * 10 + [10] * 3)
+    timestep_units: str = "MWd/kg"
     power: float = 4e6 / 400
     n_ba_pins: int = 12
     ba_pct: float = 5.0
@@ -42,6 +39,7 @@ class InputData():
     chain_file: str = os.environ['OPENMC_DEPLETION_CHAIN']
     cross_sections: str = os.environ['OPENMC_CROSS_SECTIONS']
     plot_geometry: bool = False
+    N_groups: int = 2
 
 def plot_geometry(inp: InputData, universe: openmc.Universe, colors: dict):  
     # Increase font size for better visibility with large pixel counts
@@ -121,6 +119,7 @@ def get_mgxs_tallies(inp: InputData, geometry: openmc.Geometry):
     """Based on https://nbviewer.org/github/openmc-dev/openmc-notebooks/blob/main/mgxs-part-iii.ipynb"""
 
     # Instantiate a 2-group EnergyGroups object
+    assert inp.N_groups == 2, "Only 2-group MGXS is supported as of now"
     groups = openmc.mgxs.EnergyGroups(group_edges=[0., 0.625, 20.0e6]) # type: ignore
 
     # Initialize a 2-group MGXS Library for OpenMOC
