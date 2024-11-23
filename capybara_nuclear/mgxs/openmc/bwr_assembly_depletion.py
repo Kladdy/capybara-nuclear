@@ -10,14 +10,19 @@ import openmc.model
 import openmc.deplete
 import openmc.mgxs
 from capybara_nuclear.mgxs.openmc import ba_pin_positions, materials, geometries
+from dataclasses_json import dataclass_json
+import pickle 
+from typing import List
 
 
+@dataclass_json
 @dataclass
 class InputData():
     original_cwd_path: str
     cwd_path: str
     results_path: str
     img_path: str
+    design_name: str
     x: float = 0.0
     enrichment_pct: float = 5.0
     lattice_pitch: float = 1.26
@@ -25,7 +30,9 @@ class InputData():
     clad_ir: float = 0.47
     clad_or: float = 0.55
     lattice_size: int = 10
-    dt: ClassVar[list[int]] = [3 * 24 * 60 * 60] * 5 + [200 * 24 * 60 * 60] * 10
+    # dt: ClassVar[list[int]] = [3 * 24 * 60 * 60] * 5 + [200 * 24 * 60 * 60] * 10
+    dt: List[int] = field(default_factory=lambda: [3 * 24 * 60 * 60] * 5 + [200 * 24 * 60 * 60] * 10)
+    timestep_units: str = "s"
     power: float = 4e6 / 400
     n_ba_pins: int = 12
     ba_pct: float = 5.0
@@ -82,7 +89,7 @@ def get_settings(inp: InputData):
 
 def run_depletion(inp: InputData, model: openmc.model.Model):
     op = openmc.deplete.CoupledOperator(model, diff_burnable_mats=False, chain_file=inp.chain_file)
-    cecm = openmc.deplete.CECMIntegrator(op, inp.dt, inp.power)
+    cecm = openmc.deplete.CECMIntegrator(op, inp.dt, inp.power, timestep_units=inp.timestep_units)
     os.chdir(inp.cwd_path)
     cecm.integrate()
     os.chdir(inp.original_cwd_path)
@@ -94,7 +101,7 @@ def get_results(inp: InputData, output_path: str | None = None):
     results = openmc.deplete.Results(f'{inp.cwd_path}/depletion_results.h5')
 
     # Get the runtime by adding all the time steps from the statepoints
-    runtimes = [openmc.StatePoint(filepath=f'{inp.cwd_path}/openmc_simulation_n{i}.h5', autolink=False).runtime["total"] for i in range(1, len(inp.dt) + 1)]
+    runtimes = [openmc.StatePoint(filepath=f'{inp.cwd_path}/openmc_simulation_n{i}.h5', autolink=False).runtime["total"] for i in range(0, len(inp.dt) + 1)]
     runtime = sum(runtimes)
     label = f"Chain: {inp.chain_file.split('/')[-1]}\nRuntime: {runtime:.0f} s"
     print(f"Depletion chain: {inp.chain_file.split('/')[-1]}, runtime: {runtime:.0f} s")
@@ -133,22 +140,44 @@ def get_mgxs_tallies(inp: InputData, geometry: openmc.Geometry):
     mgxs_lib.build_library()
 
     # Create a "tallies.xml" file for the MGXS Library
-    tallies = openmc.Tallies()
-    mgxs_lib.add_to_tallies_file(tallies, merge=True)
+    mgxs_tallies = openmc.Tallies()
+    mgxs_lib.add_to_tallies_file(mgxs_tallies, merge=True)
 
-    return tallies
+    return mgxs_tallies, mgxs_lib
 
-def get_mgxs_results(inp: InputData):
-    pass
+def get_mgxs_results(inp: InputData, mgxs_lib: openmc.mgxs.Library, output_path: str | None = None):
+    if output_path is None:
+        output_path = inp.results_path
+
+    output_path = os.path.join(output_path, "mgxs")
+
+    # Get all statepoints
+    statepoints = [openmc.StatePoint(filepath=f'{inp.cwd_path}/openmc_simulation_n{i}.h5', autolink=True) for i in range(0, len(inp.dt) + 1)]
+    
+    for sp_idx, sp in enumerate(statepoints):
+        # Initialize MGXS Library with OpenMC statepoint data
+        mgxs_lib.load_from_statepoint(sp)
+
+        # Store the cross section data in an "mgxs/mgxs.h5" HDF5 binary file
+        mgxs_lib.build_hdf5_store(filename=f'mgxs_{sp_idx}.h5', directory=output_path)
+
+def dump_input(inp: InputData):
+    # with open(f'{inp.cwd_path}/input.json', 'w') as f:
+    #     f.write(inp.to_json()) # type: ignore
+
+    with open(f'{inp.cwd_path}/input.pkl', 'wb') as f:
+        pickle.dump(inp.to_dict(), f) # type: ignore
 
 def run(inp: InputData):
+    dump_input(inp)
+
     geometry = get_geometry(inp)
     settings = get_settings(inp)
-    mgxs_tallies = get_mgxs_tallies(inp, geometry)
+    mgxs_tallies, mgxs_lib = get_mgxs_tallies(inp, geometry)
 
     model = openmc.model.Model(geometry=geometry, settings=settings, tallies=mgxs_tallies)
     model.differentiate_depletable_mats(diff_volume_method="divide equally")
     run_depletion(inp, model)
     
     get_results(inp)
-    get_mgxs_results(inp)
+    get_mgxs_results(inp, mgxs_lib)
