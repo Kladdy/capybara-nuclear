@@ -35,7 +35,7 @@ FILE data/komodo/komodo_XSEC.txt
   4  4  4  4  4  4  0  0  0
   4  4  4  4  0  0  0  0  0
 ! Planar_type_2 (Fuel)
-  3  2  2  2  3  2  2  1  4
+  1  2  2  2  3  2  2  1  4
   2  2  2  2  2  2  2  1  4
   2  2  2  2  2  2  1  1  4
   2  2  2  2  2  2  1  4  4
@@ -45,7 +45,7 @@ FILE data/komodo/komodo_XSEC.txt
   1  1  1  4  4  4  0  0  0
   4  4  4  4  0  0  0  0  0
 ! Planar_type_3 (Fuel+Partial Control Rods)
-  3  2  2  2  3  2  2  1  4
+  1  2  2  2  3  2  2  1  4
   2  2  2  2  2  2  2  1  4
   2  2  3  2  2  2  1  1  4
   2  2  2  2  2  2  1  4  4
@@ -73,6 +73,10 @@ FILE data/komodo/komodo_XSEC.txt
 
 %ITER
 1200 5 1.e-5 1.e-5 15 40 20 80 ! 5 inner iterations per outer, and fission extrapolate every 15 outer iterations
+
+%OUTP
+
+%VTK
 """
     
     with open('data/komodo/komodo_input.txt', 'w') as f:
