@@ -1,4 +1,5 @@
 from cn.models.Core import (
+    BaseCoreMap,
     BoolCoreAxial,
     BoolCoreMap,
     BoolListCoreMap,
@@ -131,6 +132,54 @@ def test_get_item_by_ij_valid_input(core_3x3: Core, point, expected_value):
 
 
 @pytest.mark.parametrize(
+    "coremap_type, values, expected_error_message",
+    [
+        (FloatCoreMap, 1, "values must be of type list"),
+        (FloatCoreMap, [1.0, 2.0], "values must be of type list[list]"),
+        (
+            FloatCoreMap,
+            [[1.0, 2.0], [3.0, 4.0, "a"]],
+            "values must be of type list[list[float | None]]",
+        ),
+        (FloatCoreMap, [[1.0, 2.0], [3.0, "a"]], "values must be of type list[list[float | None]]"),
+        (IntCoreMap, [[1, 2], [3, 4.0]], "values must be of type list[list[int | None]]"),
+        (StrCoreMap, [["a", "b"], ["c", 1]], "values must be of type list[list[str | None]]"),
+        (
+            BoolCoreMap,
+            [[True, False], [False, "1"]],
+            "values must be of type list[list[bool | None]]",
+        ),
+    ],
+)
+def test_coremap_types_invalid_input(coremap_type, values, expected_error_message):
+    with pytest.raises(ValueError) as e:
+        coremap = coremap_type(values=values)
+    assert str(e.value) == expected_error_message
+
+
+@pytest.mark.parametrize(
+    "coremap_type, values, expected_error_message",
+    [
+        (
+            FloatCoreMap,
+            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+            "values must have the same size as the core (3)",
+        ),
+        (
+            FloatCoreMap,
+            [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+            "values must have the same size as the core (3)",
+        ),
+    ],
+)
+def test_coremap_assert_core_map_size(core_3x3: Core, coremap_type, values, expected_error_message):
+    with pytest.raises(ValueError) as e:
+        coremap = coremap_type(values=values)
+        coremap.assert_map_size(core_3x3)
+    assert str(e.value) == expected_error_message
+
+
+@pytest.mark.parametrize(
     "point, expected_error_message",
     [
         ([0, 0], "point must be of type tuple"),
@@ -199,32 +248,6 @@ def test_get_item_by_ijk_valid_input(core_3x3: Core, point, expected_value):
 
 
 @pytest.mark.parametrize(
-    "coremap_type, values, expected_error_message",
-    [
-        (FloatCoreMap, 1, "values must be of type list"),
-        (FloatCoreMap, [1.0, 2.0], "values must be of type list[list]"),
-        (
-            FloatCoreMap,
-            [[1.0, 2.0], [3.0, 4.0, "a"]],
-            "values must be of type list[list[float | None]]",
-        ),
-        (FloatCoreMap, [[1.0, 2.0], [3.0, "a"]], "values must be of type list[list[float | None]]"),
-        (IntCoreMap, [[1, 2], [3, 4.0]], "values must be of type list[list[int | None]]"),
-        (StrCoreMap, [["a", "b"], ["c", 1]], "values must be of type list[list[str | None]]"),
-        (
-            BoolCoreMap,
-            [[True, False], [False, "1"]],
-            "values must be of type list[list[bool | None]]",
-        ),
-    ],
-)
-def test_coremap_types_invalid_input(coremap_type, values, expected_error_message):
-    with pytest.raises(ValueError) as e:
-        coremap = coremap_type(values=values)
-    assert str(e.value) == expected_error_message
-
-
-@pytest.mark.parametrize(
     "listcoremap_type, values, expected_error_message",
     [
         (FloatListCoreMap, 1, "values must be of type list"),
@@ -255,6 +278,34 @@ def test_coremap_types_invalid_input(coremap_type, values, expected_error_messag
 def test_listcoremap_types_invalid_input(listcoremap_type, values, expected_error_message):
     with pytest.raises(ValueError) as e:
         coremap = listcoremap_type(values=values)
+    assert str(e.value) == expected_error_message
+
+
+@pytest.mark.parametrize(
+    "listcoremap_type, values, expected_error_message",
+    [
+        (
+            FloatListCoreMap,
+            [[[1.0], [2.0], [3.0]], [[4.0], [5.0], [6.0]]],
+            "values must have the same size as the core (3)",
+        ),
+        (
+            FloatListCoreMap,
+            [
+                [[1.0], [2.0]],
+                [[3.0], [4.0], [5.0]],
+                [[6.0], [7.0]],
+            ],
+            "values must have the same size as the core (3)",
+        ),
+    ],
+)
+def test_listcoremap_assert_core_map_size(
+    core_3x3: Core, listcoremap_type, values, expected_error_message
+):
+    with pytest.raises(ValueError) as e:
+        coremap = listcoremap_type(values=values)
+        coremap.assert_map_size(core_3x3)
     assert str(e.value) == expected_error_message
 
 

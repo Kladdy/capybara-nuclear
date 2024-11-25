@@ -1,7 +1,7 @@
 import abc
 from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
-from typing import TypeVar, Generic, get_args
+from typing import TypeVar, Generic, get_args, Type, ClassVar
 from enum import Enum
 
 from cn.utils.tuple_tools import assert_2_tuple, assert_3_tuple
@@ -60,21 +60,38 @@ class Core(DataClassJsonMixin):
 
         # Check that the point is within the specified core
         elements_in_row = self.elements_by_row[i]
-        if j < (self.size - elements_in_row) // 2 or j >= (self.size + elements_in_row) // 2:
-            return False
-
-        return True
+        return not (
+            j < (self.size - elements_in_row) // 2 or j >= (self.size + elements_in_row) // 2
+        )
 
 
 @dataclass
 class BaseCoreMap(DataClassJsonMixin, abc.ABC, Generic[T]):
     values: list[list[T | None]]
 
+    _T: ClassVar[Type]
+
     def __post_init__(self):
         if type(self.values) != list:
             raise ValueError("values must be of type list")
         if not all(isinstance(x, list) for x in self.values):
             raise ValueError("values must be of type list[list]")
+
+        _T = getattr(self, "_T", None)
+
+        if _T is None:
+            raise AttributeError(
+                "Cannot determine expected type, _T must be set"
+            )  # pragma: no cover
+
+        if not all(all(isinstance(x, _T) or x is None for x in y) for y in self.values):
+            raise ValueError(f"values must be of type list[list[{_T.__name__} | None]]")
+
+    def assert_map_size(self, core: Core):
+        if len(self.values) != core.size:
+            raise ValueError(f"values must have the same size as the core ({core.size})")
+        if not all(len(x) == core.size for x in self.values):
+            raise ValueError(f"values must have the same size as the core ({core.size})")
 
     def get_item_by_ij(self, point: tuple[int, int], core: Core) -> T | None:
         assert_2_tuple(point, int)
@@ -91,49 +108,35 @@ class BaseCoreMap(DataClassJsonMixin, abc.ABC, Generic[T]):
 class FloatCoreMap(BaseCoreMap[float | None]):
     values: list[list[float | None]]
 
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(all(isinstance(x, float) or x is None for x in y) for y in self.values):
-            raise ValueError("values must be of type list[list[float | None]]")
+    _T = float
 
 
 @dataclass
 class IntCoreMap(BaseCoreMap[int | None]):
     values: list[list[int | None]]
 
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(all(isinstance(x, int) or x is None for x in y) for y in self.values):
-            raise ValueError("values must be of type list[list[int | None]]")
+    _T = int
 
 
 @dataclass
 class StrCoreMap(BaseCoreMap[str | None]):
     values: list[list[str | None]]
 
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(all(isinstance(x, str) or x is None for x in y) for y in self.values):
-            raise ValueError("values must be of type list[list[str | None]]")
+    _T = str
 
 
 @dataclass
 class BoolCoreMap(BaseCoreMap[bool | None]):
     values: list[list[bool | None]]
 
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(all(isinstance(x, bool) or x is None for x in y) for y in self.values):
-            raise ValueError("values must be of type list[list[bool | None]]")
+    _T = bool
 
 
 @dataclass
 class BaseListCoreMap(DataClassJsonMixin, abc.ABC, Generic[T]):
     values: list[list[list[T | None]]]
+
+    _T: ClassVar[Type]
 
     def __post_init__(self):
         if type(self.values) != list:
@@ -142,6 +145,24 @@ class BaseListCoreMap(DataClassJsonMixin, abc.ABC, Generic[T]):
             raise ValueError("values must be of type list[list]")
         if not all(all([isinstance(x, list) for x in y]) for y in self.values):
             raise ValueError("values must be of type list[list[list]]")
+
+        _T = getattr(self, "_T", None)
+
+        if _T is None:
+            raise AttributeError(
+                "Cannot determine expected type, _T must be set"
+            )  # pragma: no cover
+
+        if not all(
+            all(all(isinstance(x, _T) or x is None for x in y) for y in z) for z in self.values
+        ):
+            raise ValueError(f"values must be of type list[list[list[{_T.__name__} | None]]]")
+
+    def assert_map_size(self, core: Core):
+        if len(self.values) != core.size:
+            raise ValueError(f"values must have the same size as the core ({core.size})")
+        if not all(len(x) == core.size for x in self.values):
+            raise ValueError(f"values must have the same size as the core ({core.size})")
 
     def get_item_by_ij(self, point: tuple[int, int], core: Core) -> list[T | None]:
         assert_2_tuple(point, int)
@@ -171,61 +192,49 @@ class BaseListCoreMap(DataClassJsonMixin, abc.ABC, Generic[T]):
 class FloatListCoreMap(BaseListCoreMap[float | None]):
     values: list[list[list[float | None]]]
 
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(
-            all(all(isinstance(x, float) or x is None for x in y) for y in z) for z in self.values
-        ):
-            raise ValueError("values must be of type list[list[list[float | None]]]")
+    _T = float
 
 
 @dataclass
 class IntListCoreMap(BaseListCoreMap[int | None]):
     values: list[list[list[int | None]]]
 
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(
-            all(all(isinstance(x, int) or x is None for x in y) for y in z) for z in self.values
-        ):
-            raise ValueError("values must be of type list[list[list[int | None]]]")
+    _T = int
 
 
 @dataclass
 class StrListCoreMap(BaseListCoreMap[str | None]):
     values: list[list[list[str | None]]]
 
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(
-            all(all(isinstance(x, str) or x is None for x in y) for y in z) for z in self.values
-        ):
-            raise ValueError("values must be of type list[list[list[str | None]]]")
+    _T = str
 
 
 @dataclass
 class BoolListCoreMap(BaseListCoreMap[bool | None]):
     values: list[list[list[bool | None]]]
 
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(
-            all(all(isinstance(x, bool) or x is None for x in y) for y in z) for z in self.values
-        ):
-            raise ValueError("values must be of type list[list[list[bool | None]]]")
+    _T = bool
 
 
 @dataclass
 class BaseCoreAxial(DataClassJsonMixin, abc.ABC, Generic[T]):
     values: list[T]
 
+    _T: ClassVar[Type]
+
     def __post_init__(self):
         if type(self.values) != list:
             raise ValueError("values must be of type list")
+
+        _T = getattr(self, "_T", None)
+
+        if _T is None:
+            raise AttributeError(
+                "Cannot determine expected type, _T must be set"
+            )  # pragma: no cover
+
+        if not all(isinstance(x, _T) for x in self.values):
+            raise ValueError(f"values must be of type list[{_T.__name__}]")
 
     def get_item_by_k(self, k: int) -> T:
         if k < 0 or k >= len(self.values):
@@ -236,43 +245,19 @@ class BaseCoreAxial(DataClassJsonMixin, abc.ABC, Generic[T]):
 
 @dataclass
 class FloatCoreAxial(BaseCoreAxial[float]):
-    values: list[float]
-
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(isinstance(x, float) for x in self.values):
-            raise ValueError("values must be of type list[float]")
+    _T = float
 
 
 @dataclass
 class IntCoreAxial(BaseCoreAxial[int]):
-    values: list[int]
-
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(isinstance(x, int) for x in self.values):
-            raise ValueError("values must be of type list[int]")
+    _T = int
 
 
 @dataclass
 class StrCoreAxial(BaseCoreAxial[str]):
-    values: list[str]
-
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(isinstance(x, str) for x in self.values):
-            raise ValueError("values must be of type list[str]")
+    _T = str
 
 
 @dataclass
 class BoolCoreAxial(BaseCoreAxial[bool]):
-    values: list[bool]
-
-    def __post_init__(self):
-        super().__post_init__()
-
-        if not all(isinstance(x, bool) for x in self.values):
-            raise ValueError("values must be of type list[bool]")
+    _T = bool
