@@ -10,7 +10,7 @@ from cn.utils.tuple_tools import assert_2_tuple, assert_3_tuple
 T = TypeVar("T")
 
 
-class Symmetry(Enum):
+class CoreSymmetry(Enum):
     FULL = "FULL"
     HALF_MIRROR = "HALF_MIRROR"
     QUARTER_MIRROR = "QUARTER_MIRROR"
@@ -18,7 +18,6 @@ class Symmetry(Enum):
 
 @dataclass
 class Core(DataClassJsonMixin):
-    name: str
     size: int
     elements_by_row: list[int]
 

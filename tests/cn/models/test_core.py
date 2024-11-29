@@ -19,7 +19,7 @@ import pytest
 
 @pytest.fixture
 def core_3x3():
-    return Core(name="Test Core", size=3, elements_by_row=[1, 3, 1])
+    return Core(size=3, elements_by_row=[1, 3, 1])
 
 
 @pytest.mark.parametrize(
@@ -43,7 +43,7 @@ def core_3x3():
 )
 def test_core_invalid_sizes(size, elements_by_row, expected_error_message):
     with pytest.raises(ValueError) as e:
-        core = Core(name="Test Core", size=size, elements_by_row=elements_by_row)
+        core = Core(size=size, elements_by_row=elements_by_row)
     assert str(e.value) == expected_error_message
 
 
@@ -95,7 +95,7 @@ def test_point_is_within_core_invalid_input(core_3x3: Core, point, expected_erro
     ],
 )
 def test_point_is_within_valid_input(size, elements_by_row, expected_map):
-    core = Core(name="Test Core", size=size, elements_by_row=elements_by_row)
+    core = Core(size=size, elements_by_row=elements_by_row)
     for i in range(size):
         for j in range(size):
             assert core.point_is_within_core((i, j)) == expected_map[i][j]
