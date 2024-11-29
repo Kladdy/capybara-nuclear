@@ -18,7 +18,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.abspath("../../"))
 
-from capybara_nuclear import VERSION, VERSION_SHORT  # noqa: E402
+from cn import VERSION, VERSION_SHORT  # noqa: E402
 
 # -- Project information -----------------------------------------------------
 
