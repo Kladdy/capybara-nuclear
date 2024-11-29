@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from capybara_nuclear.version import VERSION
+from cn.version import VERSION
 
 
 def main():

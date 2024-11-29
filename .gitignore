@@ -58,3 +58,7 @@ tests/**/cwd
 tests/**/img
 tests/**/results
 data
+
+cn_old
+capybara_nuclear_old
+tests/cn_old
