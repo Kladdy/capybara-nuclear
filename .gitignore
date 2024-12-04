@@ -60,5 +60,7 @@ tests/**/results
 data
 
 cn_old
+cn_old2
 capybara_nuclear_old
 tests/cn_old
+tests/cn_old2

@@ -2,3 +2,8 @@
 omit = 
     tests/* 
     capybara_nuclear/*
+    capybara_nuclear_old/*
+    cn_old/*
+    cn_old2/*
+    cn/version.py
+    **/__init__.py
