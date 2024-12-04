@@ -1,6 +1,5 @@
 import numpy as np
 import dataclasses_json.cfg
-from dataclasses_json import dataclass_json, config
 
 dataclasses_json.cfg.global_config.decoders[np.ndarray] = np.asarray
 dataclasses_json.cfg.global_config.encoders[np.ndarray] = np.ndarray.tolist
