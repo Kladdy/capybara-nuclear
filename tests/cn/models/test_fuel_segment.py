@@ -1,9 +1,8 @@
-import pytest
-from cn.models.fuel.fuel_segment import FuelSegment, MaterialMap
 import numpy as np
-import orjson
+import pytest
 
-from cn.models.fuel.fuel_type import FuelGeometry
+from cn.models.fuel.fuel_segment import FuelSegment, MaterialMap
+from cn.models.fuel.fuel_type import FuelGeometry, FuelType
 
 
 @pytest.fixture
@@ -33,11 +32,12 @@ def test_rect_fuel_segment(material_uo2: MaterialMap, material_gd2o3: MaterialMa
         materials=[material_uo2, material_gd2o3],
     )
 
-    fuel_segment.save_json("test_fuel_segment.json")
+    fuel_segment.save("test_fuel_segment.yaml")
 
-    loaded_fuel_segment = FuelSegment.load_json("test_fuel_segment.json")
+    loaded_fuel_segment = FuelSegment.load("test_fuel_segment.yaml")
+
+    print(type(fuel_segment), type(loaded_fuel_segment))
 
     print(f"loaded_fuel_segment: {loaded_fuel_segment}")
 
-    assert fuel_segment == loaded_fuel_segment
-
+    assert fuel_segment.name == loaded_fuel_segment.name

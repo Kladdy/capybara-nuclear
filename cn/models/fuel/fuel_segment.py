@@ -1,16 +1,16 @@
+from dataclasses import dataclass
+
 import numpy as np
-from dataclasses import dataclass, field
-from dataclasses_json import dataclass_json, config
+
 from cn.models.fuel.fuel_type import FuelGeometry
-from cn.models.persistable_json import PersistableJson
-from marshmallow import validate, fields
+from cn.models.ndarray_field import ndarray_field
+from cn.models.persistable import PersistableYAML
 
 
-@dataclass_json
 @dataclass
-class MaterialMap(PersistableJson):
-    name: str = field(metadata=config(mm_field=fields.String(validate=validate.Length(min=1))))
-    enrichment_map: np.ndarray
+class MaterialMap(PersistableYAML):
+    name: str
+    enrichment_map: np.ndarray = ndarray_field()
 
     def validate_against_fuel_geometry(self, fuel_geometry: FuelGeometry):
         fuel_geometry_shape = (fuel_geometry.lattice_size, fuel_geometry.lattice_size)
@@ -20,8 +20,7 @@ class MaterialMap(PersistableJson):
             )
 
 
-@dataclass_json
 @dataclass
-class FuelSegment(PersistableJson):
-    name: str = field(metadata=config(mm_field=fields.String(validate=validate.Length(min=1))))
+class FuelSegment(PersistableYAML):
+    name: str
     materials: list[MaterialMap]
