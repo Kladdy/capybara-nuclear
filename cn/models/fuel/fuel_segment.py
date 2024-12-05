@@ -1,7 +1,9 @@
+import hashlib
 from dataclasses import dataclass
 
 import numpy as np
 
+from cn.models.config import Config
 from cn.models.fuel.fuel_type import FuelGeometry
 from cn.models.fuel.material import BurnableAbsorberMaterial, FuelMaterial
 from cn.models.ndarray_field import ndarray_field
@@ -39,8 +41,14 @@ class FuelSegment(PersistableYAML):
             if len(uniques) == 1 and uniques[0] == 0:
                 continue
             uniques_string = "-".join(
-                f"{count}x{unique}" for unique, count in zip(uniques, uniques_counts)
+                f"{count}x{unique}" for unique, count in zip(uniques, uniques_counts) if unique != 0
             )
             ba_strings.append(f"{ba_map.material.name}:{uniques_string}")
 
         return "_".join(ba_strings)
+
+    def get_base_dir(self, config: Config) -> str:
+        return f"{config.mgxs_dir}/fuels/{self.name}/{self.get_ba_str()}/{self.hash()}"
+
+    def hash(self) -> str:
+        return hashlib.md5(str(self.to_yaml()).encode("utf-8")).hexdigest()

@@ -146,7 +146,7 @@ def visualize(lattice_size: int, path: str):
     plt.close()
 
 
-def get_ba_map(n_ba_pins: int, lattice_size: int, enrichment: float) -> np.ndarray:
+def get_ba_map(n_ba_pins: int, lattice_size: int, ba_enrichment: float) -> np.ndarray:
     """Creates a BA map of values
 
     Parameters
@@ -155,7 +155,7 @@ def get_ba_map(n_ba_pins: int, lattice_size: int, enrichment: float) -> np.ndarr
         Number of BA pins in the fuel assembly
     lattice_size : int
         Size of the lattice
-    enrichment : float
+    ba_enrichment : float
         Enrichment value
 
     Returns
@@ -166,5 +166,5 @@ def get_ba_map(n_ba_pins: int, lattice_size: int, enrichment: float) -> np.ndarr
     ba_map = np.zeros((lattice_size, lattice_size))
     ba_pin_positions = get_ba_pin_positions(n_ba_pins, lattice_size)
     for x, y in ba_pin_positions:
-        ba_map[x, y] = enrichment
+        ba_map[x, y] = ba_enrichment
     return ba_map
