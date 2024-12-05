@@ -5,6 +5,8 @@ from typing import TypeVar
 
 from mashumaro.mixins.yaml import DataClassYAMLMixin
 
+from cn.log import logger
+
 T = TypeVar("T")
 
 
@@ -39,6 +41,8 @@ class PersistableYAML(PersistableBase, DataClassYAMLMixin):
         if file_path_dirname:
             os.makedirs(file_path_dirname, exist_ok=True)
 
+        logger.debug(f"Saving {type(self)} to '{file_path}'")
+
         yaml_data = str(self.to_yaml())
         with open(file_path, "w") as f:
             f.write(yaml_data)
@@ -57,6 +61,8 @@ class PersistableYAML(PersistableBase, DataClassYAMLMixin):
         any
             The deserialized object
         """
+
+        logger.debug(f"Loading {cls} from '{file_path}'")
 
         with open(file_path, "rb") as f:
             data = f.read().decode("utf-8")

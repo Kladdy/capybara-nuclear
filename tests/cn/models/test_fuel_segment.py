@@ -3,16 +3,17 @@ import pytest
 
 from cn.models.fuel.fuel_segment import FuelSegment, MaterialMap
 from cn.models.fuel.fuel_type import FuelGeometry, FuelType
+from cn.models.fuel.material import BurnableAbsorberMaterial, FuelMaterial
 
 
 @pytest.fixture
 def material_uo2():
-    return MaterialMap(name="uo2", enrichment_map=np.array([[1.0, 2.0], [3.0, 4.0]]))
+    return MaterialMap(material=FuelMaterial.UO2, map_values=np.array([[1.0, 2.0], [3.0, 4.0]]))
 
 
 @pytest.fixture
 def material_gd2o3():
-    return MaterialMap(name="gd2o3", enrichment_map=np.array([[5.0, 6.0], [7.0, 8.0]]))
+    return MaterialMap(material=FuelMaterial.UO2, map_values=np.array([[5.0, 6.0], [7.0, 8.0]]))
 
 
 @pytest.fixture
@@ -32,9 +33,9 @@ def test_rect_fuel_segment(material_uo2: MaterialMap, material_gd2o3: MaterialMa
         materials=[material_uo2, material_gd2o3],
     )
 
-    fuel_segment.save("test_fuel_segment.yaml")
+    fuel_segment.save("data/tests/test_fuel_segment.yaml")
 
-    loaded_fuel_segment = FuelSegment.load("test_fuel_segment.yaml")
+    loaded_fuel_segment = FuelSegment.load("data/tests/test_fuel_segment.yaml")
 
     print(type(fuel_segment), type(loaded_fuel_segment))
 
