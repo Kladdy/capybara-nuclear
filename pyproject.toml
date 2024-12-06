@@ -26,6 +26,7 @@ dependencies = [
     "pytest",
     "pytest-cov",
     "mashumaro",
+    "art",
 ]
 license = {file = "LICENSE"}
 
