@@ -2,6 +2,7 @@ import numpy as np
 
 from cn.examples.config import config
 from cn.log import logger
+from cn.mgxs.openmc.openmc_bwr_assembly_depletion import InputData
 from cn.models.fuel.fuel_segment import FuelSegment, MaterialMap
 from cn.models.fuel.fuel_type import FuelGeometry, FuelType
 from cn.models.fuel.material import BurnableAbsorberMaterial, FuelMaterial
@@ -33,8 +34,9 @@ def main():
     fuel_type = FuelType("ORCA-1", FuelGeometry(lattice_size, 1.26, 0.4096, 0.475, 0.525))
 
     fuel_segment = get_fuel_segment(fuel_type, n_ba_pins, ba_enrichment)
-
     fuel_segment.save(f"{fuel_segment.get_base_dir(config)}/fuel_segment.yaml")
+
+    inp = InputData(fuel_segment=fuel_segment)
 
 
 if __name__ == "__main__":

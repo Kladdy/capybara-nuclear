@@ -22,6 +22,9 @@ class MaterialMap(PersistableYAML):
                 f"Enrichment map shape {self.map_values.shape} does not match fuel geometry lattice shape ({fuel_geometry_shape})"
             )
 
+    def get_nonzero_counts(self) -> int:
+        return np.count_nonzero(self.map_values)
+
 
 NO_BA = "no_ba"
 
