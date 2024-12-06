@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from cn.models.config import Config
-from cn.models.fuel.fuel_type import FuelGeometry
+from cn.models.fuel.fuel_type import FuelGeometry, FuelType
 from cn.models.fuel.material import BurnableAbsorberMaterial, FuelMaterial
 from cn.models.ndarray_field import ndarray_field
 from cn.models.persistable import PersistableYAML
@@ -23,32 +23,42 @@ class MaterialMap(PersistableYAML):
             )
 
 
+NO_BA = "no_ba"
+
+
 @dataclass
 class FuelSegment(PersistableYAML):
     name: str | None
-    materials: list[MaterialMap]
+    fuel_type: FuelType
+    fuel_map: MaterialMap
+    ba_map: MaterialMap | None
+
+    def __post_init__(self):
+        assert isinstance(
+            self.fuel_map.material, FuelMaterial
+        ), f"Fuel material is not of type FuelMaterial ({self.fuel_map.material.name} not in {FuelMaterial._member_names_})"
+
+        if self.ba_map:
+            assert isinstance(
+                self.ba_map.material, BurnableAbsorberMaterial
+            ), f"Burnable absorber material is not of type BurnableAbsorberMaterial ({self.ba_map.material.name} not in {BurnableAbsorberMaterial._member_names_})"
 
     def get_ba_str(self) -> str:
-        ba_maps = [
-            material_map
-            for material_map in self.materials
-            if isinstance(material_map.material, BurnableAbsorberMaterial)
-        ]
+        if not self.ba_map:
+            return NO_BA
 
-        ba_strings = []
-        for ba_map in ba_maps:
-            uniques, uniques_counts = np.unique(ba_map.map_values, return_counts=True)
-            if len(uniques) == 1 and uniques[0] == 0:
-                continue
-            uniques_string = "-".join(
-                f"{count}x{unique}" for unique, count in zip(uniques, uniques_counts) if unique != 0
-            )
-            ba_strings.append(f"{ba_map.material.name}:{uniques_string}")
+        uniques, uniques_counts = np.unique(self.ba_map.map_values, return_counts=True)
 
-        return "_".join(ba_strings)
+        uniques_string = "-".join(
+            f"{count}x{unique}" for unique, count in zip(uniques, uniques_counts) if unique != 0
+        )
+
+        ba_str = f"{self.ba_map.material.name}_{uniques_string}"
+
+        return ba_str
 
     def get_base_dir(self, config: Config) -> str:
-        return f"{config.mgxs_dir}/fuels/{self.name}/{self.get_ba_str()}/{self.hash()}"
+        return f"{config.mgxs_dir}/fuels/{self.fuel_type.name}/segments/{self.name}/{self.get_ba_str()}/{self.hash()}"
 
     def hash(self) -> str:
         return hashlib.md5(str(self.to_yaml()).encode("utf-8")).hexdigest()

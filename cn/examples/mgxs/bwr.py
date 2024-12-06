@@ -18,7 +18,7 @@ def get_fuel_segment(fuel_type: FuelType, n_ba_pins: int, ba_enrichment: float) 
         get_ba_map(n_ba_pins, fuel_type.geometry.lattice_size, ba_enrichment),
     )
 
-    fuel_segment = FuelSegment("pyramid", [uo2_map, gd2o3_map])
+    fuel_segment = FuelSegment("pyramid", fuel_type, uo2_map, gd2o3_map)
 
     return fuel_segment
 
