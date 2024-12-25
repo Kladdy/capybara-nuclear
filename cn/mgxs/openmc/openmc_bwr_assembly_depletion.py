@@ -1,5 +1,7 @@
 import os
+import pathlib
 import pickle
+import shutil
 from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
@@ -10,17 +12,32 @@ import openmc.mgxs
 import openmc.model
 import openmc.stats
 
+from cn.log import logger
 from cn.mgxs.openmc import openmc_geometries, openmc_materials
+from cn.models.config import Config
 from cn.models.fuel.fuel_segment import FuelSegment
 from cn.models.mgxs.mgxs_run import MGXSRunBWR
 from cn.models.mgxs.openmc import OpenMCSettings
+from cn.models.persistable import PersistableYAML
 
 
 @dataclass
-class InputData:
+class InputData(PersistableYAML):
     openmc_settings: OpenMCSettings
     mgxs_run_bwr: MGXSRunBWR
     fuel_segment: FuelSegment
+
+    def __post_init__(self):
+        paths_to_reset = [
+            self.mgxs_run_bwr.cwd_path,
+            self.mgxs_run_bwr.results_path,
+            self.mgxs_run_bwr.img_path,
+        ]
+        for path in paths_to_reset:
+            logger.info(f"Resetting path: {path}")
+            if os.path.exists(path):
+                shutil.rmtree(path)
+            os.makedirs(path)
 
 
 def plot_geometry(inp: InputData, universe: openmc.Universe, colors: dict):
@@ -57,43 +74,53 @@ def get_geometry(inp: InputData):
         fuel_map.shape == ba_map.shape
     ), f"Fuel ({fuel_map.shape}) and BA ({ba_map.shape}) maps must have the same shape"
 
+    def get_combined_fuel_ba_str(fuel: float, ba: float):
+        return f"{fuel}_{ba}"
+
+    def get_fuel_ba_from_combined_str(combined_str):
+        fuel, ba = combined_str.split("_")
+        return float(fuel), float(ba)
+
     fuel_ba_stacked = np.stack((fuel_map, ba_map), axis=-1)
-    unique_fuel_ba_combinations = np.unique(fuel_ba_stacked, axis=0)
+    fuel_ba_combined_str = np.apply_along_axis(
+        lambda x: get_combined_fuel_ba_str(x[0], x[1]), -1, fuel_ba_stacked
+    )
+    uniques, uniques_inverse, uniques_count = np.unique(
+        fuel_ba_combined_str, return_inverse=True, return_counts=True
+    )
 
-    materials = np.empty_like(fuel_map, dtype=object)
+    unique_materials = np.empty_like(uniques, dtype=object)
+    for i, unique in enumerate(uniques):
+        fuel, ba = get_fuel_ba_from_combined_str(unique)
+        if fuel == 0 and ba == 0:
+            unique_materials[i] = water
+        else:
+            material = openmc_materials.uo2(enrichment_pct=fuel, gd2o3_pct=ba)
 
-    # for i, j in np.ndindex(fuel_map.shape):
-    #     if fuel_map[i, j] == 0 and ba_map[i, j] == 0:
-    #         materials[i, j] = water
-    #     else:
-    #         materials[i, j] = openmc_materials.uo2(enrichment_pct=fuel_map[i, j], gd2o3_pct=ba_map[i, j])
+            # Set volumes of fuel as it is needed for depletion calculations
+            # This implicitly sets the height to 1 cm since the volume is given as an area
+            material.volume = (
+                np.pi * inp.fuel_segment.fuel_type.geometry.fuel_or**2 * uniques_count[i]
+            )
 
-    # uo2_no_ba = openmc_materials.uo2(enrichment_pct=inp.enrichment_pct)
-    # uo2_ba = openmc_materials.uo2(enrichment_pct=inp.enrichment_pct, gd2o3_pct=inp.ba_pct)
+            unique_materials[i] = material
 
-    # Set volumes of fuel as it is needed for depletion calculations
-    # TODO: Should this be multiplied by number of pins for each material?
-    # uo2_no_ba.volume = np.pi * inp.fuel_or**2 * (inp.lattice_size**2 - n_ba_pins)  # type: ignore
-    # uo2_ba.volume = np.pi * inp.fuel_or**2 * inp.n_ba_pins  # type: ignore
+    fuel_materials = np.empty_like(fuel_map, dtype=openmc.Material)
 
-    # ba_positions = ba_pin_positions.get(inp.n_ba_pins, inp.lattice_size)
-    # fuel_materials = [
-    #     uo2_ba if (i, j) in ba_positions else uo2_no_ba
-    #     for i in range(inp.lattice_size)
-    #     for j in range(inp.lattice_size)
-    # ]
+    for i, j in np.ndindex(fuel_map.shape):
+        fuel_materials[i, j] = unique_materials[uniques_inverse[i, j]]
 
-    # universe = openmc_geometries.rectangular_lattice(
-    #     inp.fuel_segment.fuel_type.geometry.lattice_size,
-    #     inp.fuel_segment.fuel_type.geometry.lattice_pitch,
-    #     inp.fuel_segment.fuel_type.geometry.fuel_or,
-    #     fuel_materials,
-    #     inp.fuel_segment.fuel_type.geometry.clad_ir,
-    #     inp.fuel_segment.fuel_type.geometry.clad_or,
-    #     zircaloy2,
-    #     water,
-    #     boundary_type="reflective",
-    # )
+    universe = openmc_geometries.rectangular_lattice(
+        inp.fuel_segment.fuel_type.geometry.lattice_size,
+        inp.fuel_segment.fuel_type.geometry.lattice_pitch,
+        inp.fuel_segment.fuel_type.geometry.fuel_or,
+        fuel_materials.flatten(),  # type: ignore
+        inp.fuel_segment.fuel_type.geometry.clad_ir,
+        inp.fuel_segment.fuel_type.geometry.clad_or,
+        zircaloy2,
+        water,
+        boundary_type="reflective",
+    )
 
     # colors = {
     #     uo2_no_ba: "seagreen",
@@ -104,8 +131,8 @@ def get_geometry(inp: InputData):
     # if inp.plot_geometry:
     #     plot_geometry(inp, universe, colors)
 
-    # geometry = openmc.Geometry(universe)
-    # return geometry
+    geometry = openmc.Geometry(universe)
+    return geometry
 
 
 def get_settings(inp: InputData):
@@ -135,27 +162,29 @@ def run_depletion(inp: InputData, model: openmc.model.Model):
 
 def get_results(inp: InputData, output_path: str | None = None):
     if output_path is None:
-        output_path = inp.results_path
+        output_path = inp.mgxs_run_bwr.results_path
 
-    results = openmc.deplete.Results(f"{inp.cwd_path}/depletion_results.h5")
+    results = openmc.deplete.Results(f"{inp.mgxs_run_bwr.cwd_path}/depletion_results.h5")
 
     # Get the runtime by adding all the time steps from the statepoints
     runtimes = [
         openmc.StatePoint(
-            filepath=f"{inp.cwd_path}/openmc_simulation_n{i}.h5", autolink=False
+            filepath=f"{inp.mgxs_run_bwr.cwd_path}/openmc_simulation_n{i}.h5", autolink=False
         ).runtime["total"]
-        for i in range(0, len(inp.dt) + 1)
+        for i in range(0, len(inp.mgxs_run_bwr.dt) + 1)
     ]
     runtime = sum(runtimes)
-    label = f"Chain: {inp.chain_file.split('/')[-1]}\nRuntime: {runtime:.0f} s"
-    print(f"Depletion chain: {inp.chain_file.split('/')[-1]}, runtime: {runtime:.0f} s")
+    label = f"Chain: {inp.openmc_settings.chain_file.split('/')[-1]}\nRuntime: {runtime:.0f} s"
+    logger.info(
+        f"Depletion chain: {inp.openmc_settings.chain_file.split('/')[-1]}, runtime: {runtime:.0f} s"
+    )
 
     # Plot the depletion
     time, k = results.get_keff(time_units="d")
     plt.figure(0)
     plt.errorbar(time, k[:, 0], yerr=k[:, 1], fmt="o-", label=label)
     plt.xlabel("$t$ [d]")
-    plt.ylabel("$k_{\infty}$")
+    plt.ylabel(r"$k_{\infty}$")
     plt.grid(visible=True)
     plt.legend()
     plt.tight_layout()
@@ -166,7 +195,7 @@ def get_mgxs_tallies(inp: InputData, geometry: openmc.Geometry):
     """Based on https://nbviewer.org/github/openmc-dev/openmc-notebooks/blob/main/mgxs-part-iii.ipynb"""
 
     # Instantiate a 2-group EnergyGroups object
-    assert inp.N_groups == 2, "Only 2-group MGXS is supported as of now"
+    assert inp.mgxs_run_bwr.N_groups == 2, "Only 2-group MGXS is supported as of now"
     groups = openmc.mgxs.EnergyGroups(group_edges=[0.0, 0.625, 20.0e6])  # type: ignore
 
     # Initialize a 2-group MGXS Library for OpenMOC
@@ -201,14 +230,16 @@ def get_mgxs_tallies(inp: InputData, geometry: openmc.Geometry):
 
 def get_mgxs_results(inp: InputData, mgxs_lib: openmc.mgxs.Library, output_path: str | None = None):
     if output_path is None:
-        output_path = inp.results_path
+        output_path = inp.mgxs_run_bwr.results_path
 
     output_path = os.path.join(output_path, "mgxs")
 
     # Get all statepoints
     statepoints = [
-        openmc.StatePoint(filepath=f"{inp.cwd_path}/openmc_simulation_n{i}.h5", autolink=True)
-        for i in range(0, len(inp.dt) + 1)
+        openmc.StatePoint(
+            filepath=f"{inp.mgxs_run_bwr.cwd_path}/openmc_simulation_n{i}.h5", autolink=True
+        )
+        for i in range(0, len(inp.mgxs_run_bwr.dt) + 1)
     ]
 
     for sp_idx, sp in enumerate(statepoints):
@@ -219,16 +250,8 @@ def get_mgxs_results(inp: InputData, mgxs_lib: openmc.mgxs.Library, output_path:
         mgxs_lib.build_hdf5_store(filename=f"mgxs_{sp_idx}.h5", directory=output_path)
 
 
-def dump_input(inp: InputData):
-    # with open(f'{inp.cwd_path}/input.json', 'w') as f:
-    #     f.write(inp.to_json()) # type: ignore
-
-    with open(f"{inp.cwd_path}/input.pkl", "wb") as f:
-        pickle.dump(inp.to_dict(), f)  # type: ignore
-
-
 def run(inp: InputData):
-    dump_input(inp)
+    inp.save(f"{inp.mgxs_run_bwr.cwd_path}/input_data.yaml")
 
     geometry = get_geometry(inp)
     settings = get_settings(inp)
@@ -239,7 +262,4 @@ def run(inp: InputData):
     run_depletion(inp, model)
 
     get_results(inp)
-    get_mgxs_results(inp, mgxs_lib)
-    get_results(inp)
-    get_mgxs_results(inp, mgxs_lib)
     get_mgxs_results(inp, mgxs_lib)
