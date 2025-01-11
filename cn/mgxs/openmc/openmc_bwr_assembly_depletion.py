@@ -181,6 +181,7 @@ def get_results(inp: InputData, output_path: str | None = None):
 
     # Plot the depletion
     time, k = results.get_keff(time_units="d")
+    plt.close("all")
     plt.figure(0)
     plt.errorbar(time, k[:, 0], yerr=k[:, 1], fmt="o-", label=label)
     plt.xlabel("$t$ [d]")

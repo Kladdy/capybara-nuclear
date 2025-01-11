@@ -36,28 +36,34 @@ def main():
     lattice_size = 9
     n_ba_pins = 8
     ba_enrichment = 5.0
+
+    fuel_type = FuelType("ORCA-1", FuelGeometry(lattice_size, 1.26, 0.55, 0.57, 0.59))
+
+    fuel_segment = get_fuel_segment(fuel_type, n_ba_pins, ba_enrichment)
+    base_dir = fuel_segment.get_base_dir(config)
+    fuel_segment.save(f"{base_dir}/fuel_segment.yaml")
+
+    openmc_settings = OpenMCSettings(
+        particles=1000,
+        active_batches=100,
+        inactive_batches=50,
+        # particles=100,
+        # active_batches=10,
+        # inactive_batches=19,
+        chain_file=os.environ["OPENMC_DEPLETION_CHAIN"],
+        cross_sections=os.environ["OPENMC_CROSS_SECTIONS"],
+    )
+
     for x in [0.0, 0.25, 0.50, 0.75, 1.0]:
-
-        fuel_type = FuelType("ORCA-1", FuelGeometry(lattice_size, 1.26, 0.4096, 0.475, 0.525))
-
-        fuel_segment = get_fuel_segment(fuel_type, n_ba_pins, ba_enrichment)
-        base_dir = fuel_segment.get_base_dir(config)
-        fuel_segment.save(f"{base_dir}/fuel_segment.yaml")
+        # for x in [0.0, 0.25]:
 
         case_path = MGXSRunBWR.get_base_dir(x, config, fuel_segment)
-
-        openmc_settings = OpenMCSettings(
-            particles=50000,
-            active_batches=200,
-            inactive_batches=50,
-            chain_file=os.environ["OPENMC_DEPLETION_CHAIN"],
-            cross_sections=os.environ["OPENMC_CROSS_SECTIONS"],
-        )
 
         mgxs_run_bwr = MGXSRunBWR(
             x=x,
             power=4e6 / 400,
             dt=[0.5] * 10 + [1] * 10 + [5] * 11,
+            # dt=[0.5] * 1,
             dt_unit=TimeStepUnit.MWd_kg,
             N_groups=2,
             original_cwd_path=os.getcwd(),
