@@ -10,26 +10,31 @@ from cn.examples.config import config
 from cn.log import logger
 from cn.mgxs.openmc import openmc_bwr_assembly_depletion
 from cn.mgxs.openmc.openmc_bwr_assembly_depletion import InputData
+from cn.models.mgxs.mgxs_run import MGXSRunBWR, TimeStepUnit
 
-BASE_DIR_PATH_WILDCARD = "data/mgxs/fuels/ORCA-1/segments/pyramid/GD2O3_8x5.0/*"
+BASE_DIR_PATH_WILDCARD = "data/mgxs/fuels/ORCA-1/segments/pyramid/GD2O3_8x5.0/5*"
 
 
 def main():
+    logger.info(f"MGXS directory: '{config.mgxs_dir}'")
     logger.info(f"Base directory wildcard: '{BASE_DIR_PATH_WILDCARD}'")
+
     for base_dir_path in glob(BASE_DIR_PATH_WILDCARD):
         plt.close("all")  # Remove all existing figures
 
         logger.info(f"Base directory: '{base_dir_path}'")
-        logger.info(f"MGXS directory: '{config.mgxs_dir}'")
 
         inp_list = [
             InputData.load(inp_data_path)
-            for inp_data_path in glob(f"{base_dir_path}/voids/*/cwd/input_data.yaml")
+            for inp_data_path in glob(f"{base_dir_path}/**/cwd/input_data.yaml", recursive=True)
         ]
-        inp_list.sort(key=lambda inp: inp.mgxs_run_bwr.x)  # Sort by void
+        # Sort by void and power
+        inp_list.sort(key=lambda inp: (inp.mgxs_run_bwr.x, inp.mgxs_run_bwr.power))
+
+        logger.info(f"Found {len(inp_list)} input data files")
 
         for inp in inp_list:
-            openmc_bwr_assembly_depletion.get_results(inp, output_path=base_dir_path, reset_plot=False)  # type: ignore
+            openmc_bwr_assembly_depletion.get_results(inp, output_path=base_dir_path, time_units=TimeStepUnit.d, reset_plot=False)  # type: ignore
 
 
 if __name__ == "__main__":

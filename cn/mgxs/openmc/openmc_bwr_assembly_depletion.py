@@ -190,7 +190,7 @@ def get_results(
         for i in range(0, len(inp.mgxs_run_bwr.dt) + 1)
     ]
     runtime = sum(runtimes)
-    label = f"Void: {inp.mgxs_run_bwr.x}\nRuntime: {runtime:.0f} s"
+    label = f"Void: {inp.mgxs_run_bwr.x}\nPower: {inp.mgxs_run_bwr.power}\nRuntime: {runtime:.0f} s"
     logger.info(label)
 
     # Plot the depletion
@@ -199,7 +199,7 @@ def get_results(
         plt.close("all")
     plt.figure(0)
     plt.errorbar(time, k[:, 0], yerr=k[:, 1], fmt="o-", label=label)
-    plt.xlabel("$t$ [d]")
+    plt.xlabel(f"$t$ [{time_units}]")
     plt.ylabel(r"$k_{\infty}$")
     plt.grid(visible=True)
     plt.legend()

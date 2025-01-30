@@ -54,29 +54,33 @@ def main():
         cross_sections=os.environ["OPENMC_CROSS_SECTIONS"],
     )
 
-    for x in [0.0, 0.01, 0.02, 0.03, 0.25, 0.50]:
+    for x in [0.0, 0.01, 0.02, 0.03, 0.10, 0.25, 0.50]:
         # for x in [0.0, 0.25]:
+        for power in [8e6 / 400, 4e6 / 400, 2e6 / 400]:
 
-        case_path = MGXSRunBWR.get_base_dir(x, config, fuel_segment)
+            case_path = MGXSRunBWR.get_base_dir(x, power, config, fuel_segment)
 
-        mgxs_run_bwr = MGXSRunBWR(
-            x=x,
-            power=4e6 / 400,
-            dt=[0.5] * 10 + [1] * 10 + [5] * 11,
-            # dt=[0.5] * 1,
-            dt_unit=TimeStepUnit.MWd_kg,
-            N_groups=2,
-            original_cwd_path=os.getcwd(),
-            cwd_path=f"{case_path}/cwd",
-            results_path=f"{case_path}/results",
-            img_path=f"{case_path}/img",
-        )
+            mgxs_run_bwr = MGXSRunBWR(
+                x=x,
+                power=power,
+                # power=4e6 / 400,
+                dt=[0.5] * 10 + [1] * 10 + [5] * 11 + [10] * 10,
+                # dt=[0.5] * 1,
+                dt_unit=TimeStepUnit.MWd_kg,
+                N_groups=2,
+                original_cwd_path=os.getcwd(),
+                cwd_path=f"{case_path}/cwd",
+                results_path=f"{case_path}/results",
+                img_path=f"{case_path}/img",
+            )
 
-        inp = InputData(
-            fuel_segment=fuel_segment, openmc_settings=openmc_settings, mgxs_run_bwr=mgxs_run_bwr
-        )
+            inp = InputData(
+                fuel_segment=fuel_segment,
+                openmc_settings=openmc_settings,
+                mgxs_run_bwr=mgxs_run_bwr,
+            )
 
-        openmc_bwr_assembly_depletion.run(inp)
+            openmc_bwr_assembly_depletion.run(inp)
 
 
 if __name__ == "__main__":
