@@ -27,7 +27,7 @@ class InputData(PersistableYAML):
     mgxs_run_bwr: MGXSRunBWR
     fuel_segment: FuelSegment
 
-    def __post_init__(self):
+    def reset_paths(self):
         paths_to_reset = [
             self.mgxs_run_bwr.cwd_path,
             self.mgxs_run_bwr.results_path,
@@ -160,13 +160,16 @@ def run_depletion(inp: InputData, model: openmc.model.Model):
     os.chdir(inp.mgxs_run_bwr.original_cwd_path)
 
 
-def get_results(inp: InputData, output_path: str | None = None):
+def get_results(
+    inp: InputData, output_path: str | None = None, time_units: str = "d", reset_plot: bool = True
+):
     if output_path is None:
         output_path = inp.mgxs_run_bwr.results_path
 
     results = openmc.deplete.Results(f"{inp.mgxs_run_bwr.cwd_path}/depletion_results.h5")
 
     # Get the runtime by adding all the time steps from the statepoints
+    logger.info("Getting runtime...")
     runtimes = [
         openmc.StatePoint(
             filepath=f"{inp.mgxs_run_bwr.cwd_path}/openmc_simulation_n{i}.h5", autolink=False
@@ -174,14 +177,13 @@ def get_results(inp: InputData, output_path: str | None = None):
         for i in range(0, len(inp.mgxs_run_bwr.dt) + 1)
     ]
     runtime = sum(runtimes)
-    label = f"Chain: {inp.openmc_settings.chain_file.split('/')[-1]}\nRuntime: {runtime:.0f} s"
-    logger.info(
-        f"Depletion chain: {inp.openmc_settings.chain_file.split('/')[-1]}, runtime: {runtime:.0f} s"
-    )
+    label = f"Void: {inp.mgxs_run_bwr.x}\nRuntime: {runtime:.0f} s"
+    logger.info(label)
 
     # Plot the depletion
-    time, k = results.get_keff(time_units="d")
-    plt.close("all")
+    time, k = results.get_keff(time_units=time_units)
+    if reset_plot:
+        plt.close("all")
     plt.figure(0)
     plt.errorbar(time, k[:, 0], yerr=k[:, 1], fmt="o-", label=label)
     plt.xlabel("$t$ [d]")
@@ -190,6 +192,8 @@ def get_results(inp: InputData, output_path: str | None = None):
     plt.legend()
     plt.tight_layout()
     plt.savefig(f"{output_path}/keff.png")
+
+    logger.info(f"Saved keff plot to '{output_path}/keff.png'")
 
 
 def get_mgxs_tallies(inp: InputData, geometry: openmc.Geometry):
@@ -252,6 +256,7 @@ def get_mgxs_results(inp: InputData, mgxs_lib: openmc.mgxs.Library, output_path:
 
 
 def run(inp: InputData):
+    inp.reset_paths()
     inp.save(f"{inp.mgxs_run_bwr.cwd_path}/input_data.yaml")
 
     geometry = get_geometry(inp)
