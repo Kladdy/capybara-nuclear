@@ -37,7 +37,7 @@ def main():
     n_ba_pins = 8
     ba_enrichment = 5.0
 
-    fuel_type = FuelType("ORCA-1", FuelGeometry(lattice_size, 1.26, 0.55, 0.57, 0.59))
+    fuel_type = FuelType("ORCA-1", FuelGeometry(lattice_size, 1.26, 0.54, 0.56, 0.58))
 
     fuel_segment = get_fuel_segment(fuel_type, n_ba_pins, ba_enrichment)
     base_dir = fuel_segment.get_base_dir(config)
@@ -54,7 +54,7 @@ def main():
         cross_sections=os.environ["OPENMC_CROSS_SECTIONS"],
     )
 
-    for x in [0.0, 0.25, 0.50, 0.75, 1.0]:
+    for x in [0.0, 0.01, 0.02, 0.03, 0.25, 0.50]:
         # for x in [0.0, 0.25]:
 
         case_path = MGXSRunBWR.get_base_dir(x, config, fuel_segment)
