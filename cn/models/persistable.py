@@ -54,7 +54,7 @@ class PersistableYAML(PersistableBase, DataClassYAMLMixin):
         Parameters
         ----------
         file_path : str
-            The path to the file to write
+            The path to the file to read
 
         Returns
         -------
