@@ -58,6 +58,19 @@ def plot_geometry(inp: InputData, universe: openmc.Universe, colors: dict):
     plt.rcParams.update({"font.size": original_font_size})
 
 
+def get_tallies(inp: InputData, geometry: openmc.Geometry):
+    tallies = openmc.Tallies()
+
+    flux_tally = openmc.Tally(name="flux")
+    flux_tally.scores = ["flux"]
+    flux_energy_filter = openmc.EnergyFilter(np.logspace(-3, 7, 101))
+    flux_tally.filters = [flux_energy_filter]
+
+    tallies.append(flux_tally)
+
+    return tallies
+
+
 def get_geometry(inp: InputData):
 
     zircaloy2 = openmc_materials.zircaloy2()
@@ -196,7 +209,7 @@ def get_results(
     logger.info(f"Saved keff plot to '{output_path}/keff.png'")
 
 
-def get_mgxs_tallies(inp: InputData, geometry: openmc.Geometry):
+def get_mgxs_tallies(inp: InputData, geometry: openmc.Geometry, tallies: openmc.Tallies):
     """Based on https://nbviewer.org/github/openmc-dev/openmc-notebooks/blob/main/mgxs-part-iii.ipynb"""
 
     # Instantiate a 2-group EnergyGroups object
@@ -227,10 +240,9 @@ def get_mgxs_tallies(inp: InputData, geometry: openmc.Geometry):
     mgxs_lib.build_library()
 
     # Create a "tallies.xml" file for the MGXS Library
-    mgxs_tallies = openmc.Tallies()
-    mgxs_lib.add_to_tallies_file(mgxs_tallies, merge=True)
+    mgxs_lib.add_to_tallies_file(tallies, merge=True)
 
-    return mgxs_tallies, mgxs_lib
+    return mgxs_lib
 
 
 def get_mgxs_results(inp: InputData, mgxs_lib: openmc.mgxs.Library, output_path: str | None = None):
@@ -261,9 +273,10 @@ def run(inp: InputData):
 
     geometry = get_geometry(inp)
     settings = get_settings(inp)
-    mgxs_tallies, mgxs_lib = get_mgxs_tallies(inp, geometry)
+    tallies = get_tallies(inp, geometry)
+    mgxs_lib = get_mgxs_tallies(inp, geometry, tallies)
 
-    model = openmc.model.Model(geometry=geometry, settings=settings, tallies=mgxs_tallies)
+    model = openmc.model.Model(geometry=geometry, settings=settings, tallies=tallies)
     model.differentiate_depletable_mats(diff_volume_method="divide equally")
     run_depletion(inp, model)
 
