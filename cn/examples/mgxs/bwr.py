@@ -18,7 +18,7 @@ from cn.utils.map_tools import get_ba_map, get_pyramid_peaked_map
 def get_fuel_segment(fuel_type: FuelType, n_ba_pins: int, ba_enrichment: float) -> FuelSegment:
     uo2_map = MaterialMap(
         FuelMaterial.UO2,
-        get_pyramid_peaked_map(fuel_type.geometry.lattice_size, 4.0, 0.4, 1, min=0),
+        get_pyramid_peaked_map(fuel_type.geometry.lattice_size, 4.5, 0.5, 1, min=0),
     )
     gd2o3_map = MaterialMap(
         BurnableAbsorberMaterial.GD2O3,
@@ -37,16 +37,16 @@ def main():
     n_ba_pins = 8
     ba_enrichment = 5.0
 
-    fuel_type = FuelType("ORCA-1", FuelGeometry(lattice_size, 1.26, 0.54, 0.56, 0.58))
+    fuel_type = FuelType("ORCA-1", FuelGeometry(lattice_size, 1.26, 0.475, 0.525, 0.4096))
 
     fuel_segment = get_fuel_segment(fuel_type, n_ba_pins, ba_enrichment)
     base_dir = fuel_segment.get_base_dir(config)
     fuel_segment.save(f"{base_dir}/fuel_segment.yaml")
 
     openmc_settings = OpenMCSettings(
-        particles=1000,
-        active_batches=100,
-        inactive_batches=50,
+        particles=500,
+        active_batches=80,
+        inactive_batches=40,
         # particles=100,
         # active_batches=10,
         # inactive_batches=19,
@@ -54,18 +54,15 @@ def main():
         cross_sections=os.environ["OPENMC_CROSS_SECTIONS"],
     )
 
-    for x in [0.0, 0.01, 0.02, 0.03, 0.10, 0.25, 0.50]:
-        # for x in [0.0, 0.25]:
-        for power in [8e6 / 400, 4e6 / 400, 2e6 / 400]:
+    for alpha in [0.0, 0.2, 0.4, 0.6, 0.8]:
+        for power in [4e6 / 400]:
 
-            case_path = MGXSRunBWR.get_base_dir(x, power, config, fuel_segment)
+            case_path = MGXSRunBWR.get_base_dir(alpha, power, config, fuel_segment)
 
             mgxs_run_bwr = MGXSRunBWR(
-                x=x,
+                alpha=alpha,
                 power=power,
-                # power=4e6 / 400,
-                dt=[0.5] * 10 + [1] * 10 + [5] * 11 + [10] * 10,
-                # dt=[0.5] * 1,
+                dt=[0.5] * 10 + [1] * 10 + [5] * 13 + [10] * 10,
                 dt_unit=TimeStepUnit.MWd_kg,
                 N_groups=2,
                 original_cwd_path=os.getcwd(),

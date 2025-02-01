@@ -74,7 +74,7 @@ def get_tallies(inp: InputData, geometry: openmc.Geometry):
 def get_geometry(inp: InputData):
 
     zircaloy2 = openmc_materials.zircaloy2()
-    water = openmc_materials.water(inp.mgxs_run_bwr.x)
+    water = openmc_materials.water(inp.mgxs_run_bwr.alpha)
 
     fuel_map = inp.fuel_segment.fuel_map.map_values
 
@@ -183,14 +183,20 @@ def get_results(
 
     # Get the runtime by adding all the time steps from the statepoints
     logger.info("Getting runtime...")
-    runtimes = [
-        openmc.StatePoint(
-            filepath=f"{inp.mgxs_run_bwr.cwd_path}/openmc_simulation_n{i}.h5", autolink=False
-        ).runtime["total"]
-        for i in range(0, len(inp.mgxs_run_bwr.dt) + 1)
-    ]
+    statepoint_indexes = [i for i in range(0, len(inp.mgxs_run_bwr.dt) + 1)]
+    runtimes: list[float] = []
+    for i in statepoint_indexes:
+        try:
+            openmc.StatePoint(
+                filepath=f"{inp.mgxs_run_bwr.cwd_path}/openmc_simulation_n{i}.h5", autolink=False
+            ).runtime["total"]
+        except FileNotFoundError:
+            logger.warning(f"Statepoint {i} not found, skipping...")
+            continue
     runtime = sum(runtimes)
-    label = f"Void: {inp.mgxs_run_bwr.x}\nPower: {inp.mgxs_run_bwr.power}\nRuntime: {runtime:.0f} s"
+    label = (
+        f"Void: {inp.mgxs_run_bwr.alpha}\nPower: {inp.mgxs_run_bwr.power}\nRuntime: {runtime:.0f} s"
+    )
     logger.info(label)
 
     # Plot the depletion

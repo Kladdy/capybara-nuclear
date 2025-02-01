@@ -29,16 +29,16 @@ class MGXSRunBase(abc.ABC):
 
 @dataclass
 class MGXSRunBWR(PersistableYAML, MGXSRunBase):
-    x: float
+    alpha: float
     power: float
 
     @classmethod
-    def get_base_dir(cls, x: float, power: float, config: Config, fuel_segment: FuelSegment):
+    def get_base_dir(cls, alpha: float, power: float, config: Config, fuel_segment: FuelSegment):
         """Get the base directory for the MGXS run
 
         Args
         ----
-        x: float
+        alpha: float
             The void fraction
         power: float
             The power
@@ -52,4 +52,4 @@ class MGXSRunBWR(PersistableYAML, MGXSRunBase):
         str
             The base directory
         """
-        return f"{fuel_segment.get_base_dir(config)}/voids/{x}/powers/{power}"
+        return f"{fuel_segment.get_base_dir(config)}/voids/{alpha}/powers/{power}"

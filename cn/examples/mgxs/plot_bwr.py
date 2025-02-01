@@ -12,7 +12,10 @@ from cn.mgxs.openmc import openmc_bwr_assembly_depletion
 from cn.mgxs.openmc.openmc_bwr_assembly_depletion import InputData
 from cn.models.mgxs.mgxs_run import MGXSRunBWR, TimeStepUnit
 
-BASE_DIR_PATH_WILDCARD = "data/mgxs/fuels/ORCA-1/segments/pyramid/GD2O3_8x5.0/5*"
+# BASE_DIR_PATH_WILDCARD = (
+#     "data/mgxs/fuels/ORCA-1/segments/pyramid/GD2O3_8x5.0/281ff2547869a839f8d6d02687e206d5"
+# )
+BASE_DIR_PATH_WILDCARD = "data/mgxs/fuels/ORCA-1/segments/pyramid/GD2O3_8x5.0/281ff2547869a839f8d6d02687e206d5/voids/*/powers/20000.0"
 
 
 def main():
@@ -29,12 +32,12 @@ def main():
             for inp_data_path in glob(f"{base_dir_path}/**/cwd/input_data.yaml", recursive=True)
         ]
         # Sort by void and power
-        inp_list.sort(key=lambda inp: (inp.mgxs_run_bwr.x, inp.mgxs_run_bwr.power))
+        inp_list.sort(key=lambda inp: (inp.mgxs_run_bwr.alpha, inp.mgxs_run_bwr.power))
 
         logger.info(f"Found {len(inp_list)} input data files")
 
         for inp in inp_list:
-            openmc_bwr_assembly_depletion.get_results(inp, output_path=base_dir_path, time_units=TimeStepUnit.d, reset_plot=False)  # type: ignore
+            openmc_bwr_assembly_depletion.get_results(inp, output_path=base_dir_path, time_units=TimeStepUnit.d.value, reset_plot=False)  # type: ignore
 
 
 if __name__ == "__main__":

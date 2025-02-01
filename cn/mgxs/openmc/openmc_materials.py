@@ -1,6 +1,8 @@
 import openmc
 from iapws import IAPWS95
 
+from cn.utils.th_tools import get_vapor_quality_from_void_fraction
+
 
 def uo2(
     enrichment_pct: float,
@@ -90,12 +92,12 @@ def zircaloy2(temperature: float = 600.0):
     return zircaloy
 
 
-def water(x: float, P: float = 7.0, use_sab: bool = False):
+def water(alpha: float, P: float = 7.0, use_sab: bool = False):
     """Create a water material.
 
     Parameters
     ----------
-    x : float
+    alpha : float
         Void fraction.
     P : float, optional
         Pressure [MPa].
@@ -109,6 +111,7 @@ def water(x: float, P: float = 7.0, use_sab: bool = False):
     """
 
     # Calculate density of water
+    x = get_vapor_quality_from_void_fraction(alpha, T=None, P=P, slip_ratio=1)
     iapws = IAPWS95(x=x, P=P)
     rho = iapws.rho  # kg/m3
 
