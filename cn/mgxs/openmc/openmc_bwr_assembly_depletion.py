@@ -187,9 +187,10 @@ def get_results(
     runtimes: list[float] = []
     for i in statepoint_indexes:
         try:
-            openmc.StatePoint(
+            runtime = openmc.StatePoint(
                 filepath=f"{inp.mgxs_run_bwr.cwd_path}/openmc_simulation_n{i}.h5", autolink=False
             ).runtime["total"]
+            runtimes.append(runtime)
         except FileNotFoundError:
             logger.warning(f"Statepoint {i} not found, skipping...")
             continue

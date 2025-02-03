@@ -15,7 +15,7 @@ from cn.models.mgxs.mgxs_run import MGXSRunBWR, TimeStepUnit
 # BASE_DIR_PATH_WILDCARD = (
 #     "data/mgxs/fuels/ORCA-1/segments/pyramid/GD2O3_8x5.0/281ff2547869a839f8d6d02687e206d5"
 # )
-BASE_DIR_PATH_WILDCARD = "data/mgxs/fuels/ORCA-1/segments/pyramid/GD2O3_8x5.0/281ff2547869a839f8d6d02687e206d5/voids/*/powers/20000.0"
+BASE_DIR_PATH_WILDCARD = "data/mgxs/fuels/ORCA-1/segments/pyramid/GD2O3_8x5.0/0cb*"
 
 
 def main():
