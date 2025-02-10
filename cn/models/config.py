@@ -6,3 +6,4 @@ from cn.models.persistable import PersistableYAML
 @dataclass
 class Config(PersistableYAML):
     mgxs_dir: str
+    core_dir: str
